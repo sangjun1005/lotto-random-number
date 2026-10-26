@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>럭키 6/45 번호 생성기</title>
+<meta name="description" content="역대 1등 당첨 조합을 빼고 뽑을 수 있는 무료 로또 6/45 번호 생성기. 매주 최신 회차가 자동 반영됩니다.">
+<meta property="og:title" content="럭키 6/45 번호 생성기">
+<meta property="og:description" content="역대 1등 조합 제외 필터를 켜고 끌 수 있는 무료 로또 번호 생성기">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#d7265b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23fbc400'/%3E%3Ctext x='16' y='21' font-size='14' font-family='Arial' font-weight='bold' text-anchor='middle' fill='%233a2c00'%3E6%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: 로또 OMR 용지를 닮은 2단 — 왼쪽 '용지'(옵션·번호판), 오른쪽 '추첨 결과'. 폰에선 한 줄로 쌓임 */
+:root{
+  --paper:#ffffff;
+  --ground:#f3f1f6;
+  --ink:#1d1b2e;
+  --ink-soft:#5f5b74;
+  --line:#e6c9d3;
+  --slip:#d7265b;        /* 로또 용지 붉은 인쇄색 */
+  --slip-tint:#fdeef3;
+  --ok:#1f8a55;
+  --ok-tint:#e5f5ec;
+  --warn:#b4560a;
+  --warn-tint:#fff1e2;
+  --b1:#fbc400; --b1-fg:#3a2c00;   /* 1–10 */
+  --b2:#69c8f2; --b2-fg:#0b2c3d;   /* 11–20 */
+  --b3:#ff7272; --b3-fg:#3d0b0b;   /* 21–30 */
+  --b4:#aaaaaa; --b4-fg:#1e1e1e;   /* 31–40 */
+  --b5:#b0d840; --b5-fg:#253200;   /* 41–45 */
+  --shadow:0 1px 0 rgba(29,27,46,.06),0 8px 24px -12px rgba(29,27,46,.18);
+  --f-display:"Black Han Sans","IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1f1d2c; --ground:#15131f; --ink:#f2eff8; --ink-soft:#a7a2bd;
+    --line:#4a2a39; --slip:#ff5c8a; --slip-tint:#3a1c29;
+    --ok:#5fd394; --ok-tint:#173226; --warn:#ffb067; --warn-tint:#3a2614;
+    --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 28px -14px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1f1d2c; --ground:#15131f; --ink:#f2eff8; --ink-soft:#a7a2bd;
+  --line:#4a2a39; --slip:#ff5c8a; --slip-tint:#3a1c29;
+  --ok:#5fd394; --ok-tint:#173226; --warn:#ffb067; --warn-tint:#3a2614;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 28px -14px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+
+/* 헤더 */
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;border-bottom:3px solid var(--slip);padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-balls{display:flex}
+.brand-balls span{width:22px;height:22px;border-radius:50%;margin-left:-6px;border:2px solid var(--ground)}
+.brand-balls span:first-child{margin-left:0}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,5vw,36px);line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--slip)}
+.latest{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft)}
+.latest b{color:var(--ink);font-weight:700}
+.latest .balls{gap:4px}
+.latest .ball{width:26px;height:26px;font-size:12px}
+.plus{font-family:var(--f-num);color:var(--ink-soft)}
+
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--paper);border-radius:14px;box-shadow:var(--shadow);min-width:0}
+.slip{border:1.5px solid var(--line);position:relative;overflow:hidden}
+.slip::before{content:"";position:absolute;inset:0 0 auto 0;height:6px;background:repeating-linear-gradient(90deg,var(--slip) 0 10px,transparent 10px 16px)}
+.sec{padding:18px 18px;display:flex;flex-direction:column;gap:12px}
+.sec + .sec{border-top:1px dashed var(--line)}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--slip);text-transform:uppercase;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.label small{font-weight:500;letter-spacing:0;color:var(--ink-soft);text-transform:none;font-size:12px}
+
+/* 핵심 스위치 */
+.switch-row{display:flex;gap:14px;align-items:flex-start;cursor:pointer}
+.switch-row input{position:absolute;opacity:0;width:1px;height:1px}
+.track{flex:none;width:52px;height:30px;border-radius:30px;background:var(--line);position:relative;transition:background .2s;margin-top:2px}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.switch-row input:checked + .track{background:var(--slip)}
+.switch-row input:checked + .track::after{transform:translateX(22px)}
+.switch-row input:focus-visible + .track{outline:3px solid var(--slip);outline-offset:3px}
+.switch-text strong{display:block;font-size:16px}
+.switch-text span{font-size:13px;color:var(--ink-soft)}
+.stat{font-family:var(--f-num);font-size:12px;color:var(--ink-soft);background:var(--slip-tint);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums;line-height:1.6}
+.stat b{color:var(--ink)}
+
+/* 게임 수 */
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.seg button{font-family:var(--f-display);font-size:18px;padding:8px 0;border-radius:8px;border:1.5px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--slip);border-color:var(--slip);color:#fff}
+.seg button:focus-visible,.btn:focus-visible,.cell:focus-visible,.chip-btn:focus-visible{outline:3px solid var(--slip);outline-offset:2px}
+
+/* OMR 번호판 */
+.mode{display:flex;gap:6px}
+.chip-btn{flex:1;font:inherit;font-size:13px;font-weight:500;padding:6px 8px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer}
+.chip-btn[aria-pressed="true"][data-mode="fix"]{background:var(--slip);border-color:var(--slip);color:#fff}
+.chip-btn[aria-pressed="true"][data-mode="ban"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.omr{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cell{font-family:var(--f-num);font-size:12px;font-weight:700;color:var(--slip);background:transparent;border:1.5px solid var(--slip);border-radius:6px 6px 10px 10px;aspect-ratio:3/4;max-width:100%;cursor:pointer;display:grid;place-items:center;position:relative;padding:0;font-variant-numeric:tabular-nums;transition:background .12s}
+.cell.fix{background:var(--slip);color:#fff}
+.cell.ban{color:var(--ink-soft);border-color:var(--ink-soft);opacity:.55}
+.cell.ban::after{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--ink-soft);transform:rotate(-35deg)}
+.omr-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-soft);gap:8px;flex-wrap:wrap}
+.linkbtn{font:inherit;font-size:12px;background:none;border:0;color:var(--slip);cursor:pointer;text-decoration:underline;padding:0}
+
+/* 결과 */
+.result-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 20px 0}
+.result-head h2{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+.btn{font-family:var(--f-display);font-size:20px;letter-spacing:.02em;border:0;border-radius:12px;padding:14px 26px;background:var(--slip);color:#fff;cursor:pointer;box-shadow:0 4px 0 color-mix(in srgb,var(--slip) 60%,#000);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--slip) 60%,#000)}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn.ghost{font-family:var(--f-body);font-size:13px;font-weight:700;padding:8px 14px;background:transparent;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+.games{list-style:none;margin:0;padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px}
+.game{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--ground)}
+.game-id{font-family:var(--f-display);font-size:22px;color:var(--slip);width:22px;text-align:center}
+.balls{display:flex;gap:6px;flex-wrap:wrap}
+.ball{width:clamp(34px,8vw,42px);height:clamp(34px,8vw,42px);border-radius:50%;display:grid;place-items:center;font-family:var(--f-num);font-weight:700;font-size:clamp(14px,3.4vw,16px);font-variant-numeric:tabular-nums;position:relative;flex:none;
+  background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.75) 0 10%,rgba(255,255,255,0) 42%),var(--bc);color:var(--bfg);box-shadow:inset 0 -3px 6px rgba(0,0,0,.18)}
+.ball.c1{--bc:var(--b1);--bfg:var(--b1-fg)} .ball.c2{--bc:var(--b2);--bfg:var(--b2-fg)} .ball.c3{--bc:var(--b3);--bfg:var(--b3-fg)} .ball.c4{--bc:var(--b4);--bfg:var(--b4-fg)} .ball.c5{--bc:var(--b5);--bfg:var(--b5-fg)}
+.ball.fixed::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--slip)}
+.ball.empty{background:transparent;border:1.5px dashed var(--line);box-shadow:none}
+.ball.pop{animation:pop .42s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes pop{0%{transform:translateY(-18px) scale(.4);opacity:0}100%{transform:none;opacity:1}}
+.ball.spin{animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.copy{font:inherit;font-size:12px;font-weight:700;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);border-radius:8px;padding:5px 9px;cursor:pointer}
+.meta{grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.pill{border-radius:999px;padding:2px 9px;font-weight:500;background:var(--paper);color:var(--ink-soft)}
+.pill.ok{background:var(--ok-tint);color:var(--ok)}
+.pill.warn{background:var(--warn-tint);color:var(--warn);font-weight:700}
+.notice{margin:0 20px 16px;font-size:13px;padding:10px 12px;border-radius:10px;background:var(--warn-tint);color:var(--warn)}
+.foot-note{padding:0 20px 18px;font-size:12px;color:var(--ink-soft)}
+
+/* 기록 */
+.history ol{list-style:none;margin:0;padding:0 20px 18px;display:flex;flex-direction:column;gap:2px;font-family:var(--f-num);font-size:13px;font-variant-numeric:tabular-nums}
+.history li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.history li span:last-child{color:var(--ink-soft);font-size:11px;white-space:nowrap}
+.empty-msg{padding:0 20px 18px;color:var(--ink-soft);font-size:13px}
+.right{display:flex;flex-direction:column;gap:20px;min-width:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.ball.pop,.ball.spin{animation:none}*{transition:none!important}}
+@media (max-width:480px){.game{grid-template-columns:auto minmax(0,1fr)}.game .copy{grid-column:2;justify-self:start}}
+.site-foot{font-size:12px;color:var(--ink-soft);line-height:1.7;border-top:1px dashed var(--line);padding-top:14px}
+.site-foot p{margin:0}
+.sync{font-size:11px;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="brand-balls" aria-hidden="true"><span style="background:var(--b1)"></span><span style="background:var(--b2)"></span><span style="background:var(--b3)"></span><span style="background:var(--b4)"></span><span style="background:var(--b5)"></span></div>
+      <h1>럭키 <em>6/45</em> 번호 생성기</h1>
+    </div>
+    <div class="latest" id="latest"></div>
+  </header>
+
+  <div class="grid">
+    <aside class="panel slip" aria-label="번호 뽑기 설정">
+      <div class="sec">
+        <div class="label">역대 1등 조합 필터</div>
+        <label class="switch-row" for="excludePast">
+          <input type="checkbox" id="excludePast" checked>
+          <span class="track" aria-hidden="true"></span>
+          <span class="switch-text"><strong id="switchTitle">역대 1등 조합 제외 켜짐</strong><span id="switchDesc"></span></span>
+        </label>
+        <div class="stat" id="stat"></div>
+      </div>
+
+      <div class="sec">
+        <div class="label">게임 수 <small>한 장에 최대 5게임</small></div>
+        <div class="seg" id="seg" role="group" aria-label="게임 수"></div>
+      </div>
+
+      <div class="sec">
+        <div class="label">번호 지정 <small id="pickSummary">선택 없음</small></div>
+        <div class="mode" role="group" aria-label="번호판 표시 방식">
+          <button class="chip-btn" data-mode="fix" aria-pressed="true" id="modeFix">고정수 (꼭 포함)</button>
+          <button class="chip-btn" data-mode="ban" aria-pressed="false" id="modeBan">제외수 (빼기)</button>
+        </div>
+        <div class="omr" id="omr" aria-label="1부터 45까지 번호판"></div>
+        <div class="omr-foot"><span>고정수는 최대 5개까지 고를 수 있어요.</span><button class="linkbtn" id="clearPick">지정 초기화</button></div>
+      </div>
+    </aside>
+
+    <div class="right">
+      <section class="panel" aria-labelledby="resTitle">
+        <div class="result-head">
+          <h2 id="resTitle">이번 주 번호</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost" id="copyAll">전체 복사</button>
+            <button class="btn" id="draw">번호 뽑기</button>
+          </div>
+        </div>
+        <ol class="games" id="games" aria-live="polite"></ol>
+        <div class="notice" id="notice" hidden></div>
+        <p class="foot-note" id="footNote"></p>
+      </section>
+
+      <section class="panel history" aria-labelledby="hisTitle">
+        <div class="result-head" style="padding-bottom:10px">
+          <h2 id="hisTitle" style="font-size:18px">최근 뽑은 번호</h2>
+          <button class="linkbtn" id="clearHis">기록 지우기</button>
+        </div>
+        <ol id="history"></ol>
+        <p class="empty-msg" id="hisEmpty">번호를 뽑으면 이 브라우저에 최근 30게임까지 남겨둡니다.</p>
+      </section>
+    </div>
+  </div>
+  <footer class="site-foot">
+    <p>이 사이트는 동행복권 및 복권위원회와 관련 없는 비공식 개인 사이트입니다. 생성된 번호는 재미로 참고해 주세요. 어떤 조합이든 1등 확률은 똑같이 8,145,060분의 1입니다.</p>
+    <p>당첨번호 데이터: <a href="https://github.com/smok95/lotto" target="_blank" rel="noopener" style="color:inherit">smok95/lotto</a> · 정확한 당첨번호는 동행복권 공식 사이트에서 확인하세요.</p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// 1회~1247회 1등 당첨번호 (회차순, 2자리씩 6개 = 한 회차)
+const RAW = "102329333740091321253242111619212731142730314042162429404142141526274042020916252640081925343739020416173639092530334144010736374142021121253945222325373842020612313340030416303137060724373840030409173237031213193235063038394043101418202330061217183132040506081739051317183342070827293643020421264344040507182025012026283743091823253537010513343940081720353644070918232835061419253444040732334041092635374042020311263743011023262840072730333537161722303743060713152143071318192526132023353843171819212332063135383944031121303845011020273335081315233138141726313645061018263738040716193340021012152244020311162644020415162029070814323339010821273639172131374044101430313337071016252944102425334044062936394145020825363942141519303843030815272935032023363840141518212636042533364043020307172224030710153638101215162639050814151939051922252843050912162941020411172627031218324043061517183540020524323444010315222537021829324344101325293335031224273032171824252630050711132033010203142742061015171934162327344245060813233136021237394145041216233443011720243041042628293340172029353844012124262942031424333536062224363844053234404145081727313443010308212231060714152036060916232432010310272937010711233742010317323545172224263540051415273045173233344244081020344145041012222433010405060931071822232944010534364244072022232943071831333640262930334142040928333645111419262841010206092528020425313437051022343644030410171922031113141721040610113237122830343843011116173640071718283045041623252942020832333536072022274043030510293243123034363745192325283842071924274245081011141521031723344145040715182326031220233135061422283539021630364142070920253639101127283739091115202843031317181928081229314243121630344044262728424345041517263637020313202744021927354142040613214042212533343536021121344142021825283739010210131819010513262934030811121336061921354045161920323341051828304245192630333539040913182134011830414243030708343941223436404245010521253841071126282944060910113941051318192242091227363945242728303639031031404243162735374345021113153142041625293435041921242641030924303334131418223539192628313336041730323334011013163743010511121823050917253943021520212934142123324045131527293440021824344042010206162033010204081938041014192145010208182938192427303134081432353745081418303144050624253237040811183745061418263639152023263944071019223540353637414445071216344245121920254145142122253036050613141720031124383944121427333944010311243032031214354045010321293537010203152025031114313237142531344044020718202433101922232537121317203341111218213138020304052024050720252837020307154344071617333640162027333539010814182944041120263537051119213443022033353740050728293943010318202627041926273042051113193136020608142122040515162242172535363944040509112338051114293233051019314445080910122444040613172840132122242637212226273137010408133739011117212444020415283134111524394144061016404143021624272835041920213234021217192842131625363738091127313238131821232639121528363940030817233845030827314144192330374345060719252838142326313945081925313436010519202430010506242742041114212343061327313237142730313840040514354245071215243740061116183143091224252931012728323740091627364144050934373839030409112242070824343641031019243245051820364243050912202126030809272940070912273943010824313444131415263539141920353840041521333941101213152529031137394143071631363738101123243637010304061441020510183132060818313845020715243045133337404145011519404244061224273537011217283541031433373842081318323945030708182042171831323334010917212933061017303738010412161838030815273045061119202832050927293740010320253645070910122638071113333743131920323842021417303845041016263341070818212339041823303441051521232545141517193745010205111836010519283441041224272832020305061220091734354345151719343841011333354345101121273139031011223639021719203445050822283342161923254145121820212534091829323843101415323642020421253336071720324445162325333639061213173244010609161728091719303542030416171920040914263144161734364245051427303943131521293943050916232645030520343544010514183237021334384245060814213037182426293438010819343943011314333443011017293143010215283445152023293942051314224445030813273242031417202431051314202425010818242933052527293436051617202641111619222936141936434445050829303544020814252945101418213637010910122140011019202440041623253540051016242735020322273040111214213238020507141640051521252630051219262744032225293244112124303945172035364143161824424445070915262742081114161821152637424345111315172534040819252745011113242840062229374345052229313439061022313540010208172637010510121620101522242742041528333740112224323638071219212932040710193140012631344043010809172932071618202326161728373940101118222839010307082442091628404143011320222528111520263135182031344045121317222533101520234244010209171942092127344143061218313843050915192236101422242837052021243340010210252644071221242736060713162425092021223037060921313240010318324041111422353739040739414245020915233440021415222344071720263040050608112226040514202243111315262834021113142830040910293134061126272844081519213444011727282940101126313444081014273338041718273943060715242830121619223740032328343942010316183034182225313845020305112739192329333543031320243337081626303845091420223334111629384144061220262938172030313740102228343644012328303435252729363840040610192044111323354345132021303945011112142635020708091733030713274041031020263543061419212331121520243038081018303234122433384042132527343841041920263035010712182327081018232740040910323640040610142540081128304345111826313740032024323745232931333444061215344244010811132238041013233244021214172440081315283743042122343738101620394142061329373941162526313643081320222336041318313345010914162129091213153738142529323345182930373943082325273544030510173031030423294041011016242535121519222834010327283245172226273639010223253840040825273741020817303138020408152027020726294043081735363942222731353740202226333637050708153043041322273444041320293641192023244344131424323941052023273540030412202434010410173142062228323440010527303436061422264344072022253840060911222430121332334041052731343543122529354243122932333940030714232642040509132627050821232733011520263542021112152337020823414344010912283641142330323438060813163043042227283840030718293236040513143741010437384045101129384145112326293944071417203539011222323342051725313940182024273142162327293341010509212735161723242944091415173133102426293738111214151839070818323743122326303643061018313234031922314243031213153436081326283234050619264145131826313444051721253644042425273435081720273743060715223439011213213245293135384044010714203437030620242744011020323540020717282939131417324142111721242636122023283044042026283540121519264043111225324445010420232945050718374245041113172031051016173132141925262734041018274045040506252643011015163241010317203144030613232435011226272933111821263843031318333745020420343543141516192543020820303334101115253541161722313437051214323442050720223742050709113235030514204244021214334041081727334044071830394041060710163841020712152134142129313237020815222541060828333839203036384145081314303839020506132844091013243338020813252837082428353840030412142543081023243543041224333845051217293435051114272936021619313435131422273038021925262743020618213334010207091038010506142039081423363839040818193944040827343940141820232836022227333637060918192533070811164144082125394044101718192327051318234045040511122427081625304243060813303540021617323945010206161942091516212834071330394145010719262735030607202139131426334043020922253145010712152342192831384344081721242731010204233134151821323544091219203941041011122027111325262933060715162031031622373844071822243134061522232532141518212635111821363743081718243945152431323340051317232836010416264041020924414345051621232430131928373843032122334142030407113141111216262944031315404144050626273839162126313643073738394044030714163140101419394043081925283236071819272942040923333944020312202738050609111537030508193842102033364144050611173844020406111728151725374243121415242732070820293338111826274041070910133135082128313645071017293344091014252731010811151845010817343945121524364144040506122537030507142634041019293242212427294344172327353843061320272840011115172539060712283840071215242543010810132842051522233435071719303638242533343839152733354345031114153236010611283442071520253343041826333438010716183438020508113339031113213337040508162129112328293044031014163638031316242629102831334144010408233342010617222845030406102830021219243944021016193445101830363944030409242533111524353745172030313345020515181923010722333740020727334144020613162930021119252832041120233239040813192043011229343637012835414344121421303943203033353644020833353741060719214143011121233444070810192131030610303437111721263645041014151822020713254245020405172732112432333540061637384145051013273741021117182127131518242741232728384243072229333435040809161719052127344445081013363740151921344144101518213441010203091223031233364245070912142328031013223132121424263445010215192436030416202844041620334043021719243741020817242931131426283036101416182728060711173344050912303943093336404243102227314243040711244245010312212641030816323443072224313436010308124243093034353941051520313442072729303844050711164145010912233943061017182129050611142141081219213135121518283442111229333842080918212840061217213437062135363741061219243441151719212745111618192439061831343845141516173845031023243139040615252633121516202430050613162728021011193539020607121945030819273041021012313342020719252936101521353843060718193038031013263438012126364041052231323945021014223236121723344245010410122845172528374344101112182442050914263043011013263236031213183132142023313738061018253435152131324143061115172340051013213943081119213645010312141643113034354244022128384245172125262736121819293139030912132543141525282930162533384045102122303542011213242944091820242736121824263940070924293438081521313338131624253336051112293344040713293139040531354345050616183738031016193139131419264043121830394142060818354243091013283845010911142628022528303345091417333638030911121319020411282943051114303338142632363942192130333442070813153345011629334045051830414345121626283042010216223839051317293439162024283639141822263144111728303335020823262744202531323643081517194344102440414344061016283438091332383943082235383941040818252732111719212225103438404243162128353943030710132536031522323345091529343739141719222440121728414344020620273739212530324042020612263034020430323343030512133339011519232842192230343944051621263442051718222343020611162531010410141535071719232445041820262732183439434445091832333744041423283745010324273945192328374245081417273645030712313438031329383942010414182937091328313941040917182642011517232541193237404143162631383941051225263845060712222636182128353742081920213339071316183538051820233034071923243639021516212228020608264345030416273840020514283132212729384044031621222344072429303435011117273539040512143242050818212238061416212737161924334244020611132237062122323536010323242743071112313338091417184244020326333443050712222841020613172743031718233641031134424344132432343942101618202531041522384143030410202844070912151923082125383944141523253543010615363738232729313645010330333639041020323844071113171829021013222940040810163136041128394245031520222441121425273940101218354243010813364445021316193233091015303337091819303440030817202735131830313841142135364044030415222840021230313943041222243341070922273742010926283041040923262933101120212541041524353640020910163537011415244041021824303245112029313342011828313443061219233442062136383943021325282936012125293437010613373840020512142439030910294045091116212836020617182126030617233739222631374142010211163944070809172224041214253537020910142244010715323442071116212733031316232435273637414345050713202144132326313543031023353637172123303444071016284142020415232938021320303141171821272933020425263637131825313344122026334445061416182442010308242735010413293839061115243239040714162444131718204245010309141828020819223242061012142042172533353845010429394345071530373944081318242729081115161737081116192125091130314144152329344044091215253436010912263538051118203545212226343641031114182627142331333740152628344142121822233034031921253745010413173439122729384145121517242945050611294245101416182935091820223844080920252933051213313241141627353945050712131835123032373941020511172429060722323536010612193642031115203544263132333840091434354142020522323445021415222733071624273744020306193639081626293136060709111718051415233443030512222631121720262836061415192141071625293536022033404244061217213239030513202137061231353843212630323335051726273538222629303445141927283045040712142233132024323645081319274045112325303240071022253440031024333845042427353745203132404145030622232438030609182235031819233245061116192132071019232833040719263335011018222831030614223041010211213035161820233243061828303238010620272841012324354445030709333637040817304043061011143638040818243745131623313644010916232438212627323442030714152238081213293342040717183844111625273536131418213444112122303944041831374243121921294045062023242830071819263345101722303543060715222640081428293440011216192343143334353740121621244143032028384043172629303143060713283642131422263738101229314044010721303538061634373940010304294245061430314041071926373944101213193340030711202241031330334345162026364244111320213244101619323338071223323436151617253031030409303336111314151645010912132045021926313841062431323844030621303435131921243435030817303334061425334044040509113740101524303137010508162833051011172834151921252728010206142738060719283441131420282934030709131924010613192133213335384244040912153345141619202934051215303740071022293138071112212635020828303741101617272836030412152634021131333744061117194043071124262737030613151622081519213236080918353945020309152729303132353637010910133544040822263238101619273738303134394145050712202526212527323738030927283839071318363945021220243442202122252829021315163343171823253839060727293845142325272942082331353940092124303337051224263942031328343842030607111217070924404244010518203035081114173639030406083242070911213035030715161943050611274344031618244044061218374041081014203341011321252831041517232736141623253137061722282932020813162328051326293740030412192227091929353738070919232645010411122041101623363940060916192428031315243337031527333436081215294045010507262843263033383941162425303132010204162032070924273536051221333740030618293539081628303144010416233141010317262742102224273845062730363842021720353739010709172738232627353840050825314144051125273638101519273033131519214445031014152324081015202931032831324245010215283945022225283443061318283036041117223241161820323339091821274445080919254142040613172628011416344144242930313544121329343742030809222842041314183138121519222436020720253740011519313543060711153943121821293438102023343740021318323842111322323336111319203144071316232443020410163141091824384344011318263438040525283242162223242728081421224245";
+let LATEST_BONUS = 24;
+const FIRST_DATE = Date.UTC(2002, 11, 7); // 1회 추첨일, 이후 매주 토요일
+const TOTAL = 8145060; // 45C6
+
+const DRAWS = [];
+for (let i = 0; i < RAW.length; i += 12) {
+  const a = [];
+  for (let j = 0; j < 12; j += 2) a.push(+RAW.slice(i + j, i + j + 2));
+  DRAWS.push(a);
+}
+let N = DRAWS.length;
+const keyOf = a => a.join('-');
+const PAST = new Map(DRAWS.map((a, i) => [keyOf(a), i + 1]));
+
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString('ko-KR');
+const dateOf = no => { const d = new Date(FIRST_DATE + (no - 1) * 7 * 864e5); return `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}.${String(d.getUTCDate()).padStart(2,'0')}`; };
+const colorClass = n => 'c' + Math.min(5, Math.ceil(n / 10));
+const ballHTML = (n, extra = '') => `<span class="ball ${colorClass(n)} ${extra}">${n}</span>`;
+
+function randInt(max) { // 0..max-1, 편향 없는 암호학적 난수
+  const buf = new Uint32Array(1), lim = Math.floor(0x100000000 / max) * max;
+  do crypto.getRandomValues(buf); while (buf[0] >= lim);
+  return buf[0] % max;
+}
+
+const state = { games: 5, mode: 'fix', fix: new Set(), ban: new Set(), last: [] };
+
+function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+
+/* ---------- 상단 최신 회차 ---------- */
+function renderLatest(note) {
+$('latest').innerHTML = `<span><b>${N}회</b> ${dateOf(N)}</span><span class="balls" style="display:flex">${DRAWS[N-1].map(n => ballHTML(n)).join('')}</span><span class="plus">+</span><span class="balls" style="display:flex">${ballHTML(LATEST_BONUS)}</span>${note ? `<span class="sync">${note}</span>` : ''}`;
+}
+renderLatest();
+
+/* ---------- 스위치 ---------- */
+function renderSwitch() {
+  const on = $('excludePast').checked;
+  $('switchTitle').textContent = on ? '역대 1등 조합 제외 켜짐' : '역대 1등 조합 제외 꺼짐';
+  $('switchDesc').textContent = on
+    ? `1회부터 ${N}회까지 나온 1등 조합은 다시 뽑지 않아요.`
+    : '모든 조합을 똑같은 확률로 뽑아요. 과거 1등 조합도 나올 수 있어요.';
+  $('stat').innerHTML = on
+    ? `전체 조합 <b>${fmt(TOTAL)}</b>개 중<br>제외 <b>${fmt(N)}</b>개 → 남은 조합 <b>${fmt(TOTAL - N)}</b>개`
+    : `전체 조합 <b>${fmt(TOTAL)}</b>개 모두 후보<br>역대 1등 ${fmt(N)}개 조합도 포함`;
+  store('lucky645.exclude', on);
+}
+$('excludePast').addEventListener('change', renderSwitch);
+
+/* ---------- 게임 수 ---------- */
+'ABCDE'.split('').forEach((ch, i) => {
+  const b = document.createElement('button');
+  b.textContent = i + 1; b.setAttribute('aria-label', `${i+1}게임`);
+  b.addEventListener('click', () => { state.games = i + 1; renderSeg(); store('lucky645.games', state.games); });
+  $('seg').appendChild(b);
+});
+function renderSeg() { [...$('seg').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i + 1 === state.games))); }
+
+/* ---------- 번호판 ---------- */
+for (let n = 1; n <= 45; n++) {
+  const c = document.createElement('button');
+  c.className = 'cell'; c.textContent = n; c.dataset.n = n;
+  c.addEventListener('click', () => toggleCell(n));
+  $('omr').appendChild(c);
+}
+document.querySelectorAll('.chip-btn').forEach(b => b.addEventListener('click', () => {
+  state.mode = b.dataset.mode;
+  document.querySelectorAll('.chip-btn').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+function toggleCell(n) {
+  const own = state.mode === 'fix' ? state.fix : state.ban;
+  const other = state.mode === 'fix' ? state.ban : state.fix;
+  if (own.has(n)) own.delete(n);
+  else {
+    if (state.mode === 'fix' && state.fix.size >= 5) return toast('고정수는 5개까지 고를 수 있어요.');
+    if (state.mode === 'ban' && 45 - state.ban.size - 1 < 6) return toast('최소 6개 번호는 남겨야 해요.');
+    other.delete(n); own.add(n);
+  }
+  renderOmr();
+}
+function renderOmr() {
+  [...$('omr').children].forEach(c => {
+    const n = +c.dataset.n, f = state.fix.has(n), b = state.ban.has(n);
+    c.classList.toggle('fix', f); c.classList.toggle('ban', b);
+    c.setAttribute('aria-label', `${n}번${f ? ' 고정' : b ? ' 제외' : ''}`);
+  });
+  const parts = [];
+  if (state.fix.size) parts.push(`고정 ${state.fix.size}`);
+  if (state.ban.size) parts.push(`제외 ${state.ban.size}`);
+  $('pickSummary').textContent = parts.length ? parts.join(' · ') : '선택 없음';
+  store('lucky645.pick', { fix: [...state.fix], ban: [...state.ban] });
+}
+$('clearPick').addEventListener('click', () => { state.fix.clear(); state.ban.clear(); renderOmr(); });
+
+/* ---------- 생성 ---------- */
+function bestOverlap(nums) {
+  const s = new Set(nums); let best = 0, at = [];
+  for (let i = 0; i < N; i++) {
+    let k = 0; for (const x of DRAWS[i]) if (s.has(x)) k++;
+    if (k > best) { best = k; at = [i + 1]; } else if (k === best) at.push(i + 1);
+  }
+  return { best, at };
+}
+function generate(count, exclude) {
+  const fix = [...state.fix];
+  const pool = []; for (let n = 1; n <= 45; n++) if (!state.fix.has(n) && !state.ban.has(n)) pool.push(n);
+  const need = 6 - fix.length;
+  const out = [], seen = new Set(); let rejected = 0, tries = 0;
+  while (out.length < count && tries < 20000) {
+    tries++;
+    const p = pool.slice();
+    for (let i = 0; i < need; i++) { const j = i + randInt(p.length - i); [p[i], p[j]] = [p[j], p[i]]; }
+    const nums = fix.concat(p.slice(0, need)).sort((a, b) => a - b);
+    const k = keyOf(nums);
+    if (seen.has(k)) continue;
+    if (exclude && PAST.has(k)) { rejected++; continue; }
+    seen.add(k); out.push(nums);
+  }
+  return { out, rejected };
+}
+
+let drawing = false;
+async function draw(save) {
+  if (drawing) return;
+  const exclude = $('excludePast').checked;
+  const { out, rejected } = generate(state.games, exclude);
+  const notice = $('notice');
+  if (out.length < state.games) {
+    notice.hidden = false;
+    notice.textContent = out.length === 0
+      ? '지금 조건으로는 만들 수 있는 조합이 없어요. 고정수를 줄이거나 제외수를 풀어 주세요.'
+      : `지금 조건으로는 서로 다른 조합을 ${out.length}게임까지만 만들 수 있어요.`;
+    if (!out.length) return;
+  } else notice.hidden = true;
+
+  drawing = true; $('draw').disabled = true;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ul = $('games'); ul.innerHTML = '';
+  out.forEach((nums, gi) => {
+    const li = document.createElement('li'); li.className = 'game';
+    li.innerHTML = `<span class="game-id">${'ABCDE'[gi]}</span><div class="balls">${'<span class="ball empty spin"></span>'.repeat(6)}</div><button class="copy" disabled>복사</button><div class="meta"></div>`;
+    ul.appendChild(li);
+  });
+  // 한 개씩 굴러 나오는 연출 (뽑힌 순서 → 마지막에 정렬)
+  const lis = [...ul.children];
+  for (let i = 0; i < 6; i++) {
+    lis.forEach((li, gi) => {
+      const slot = li.querySelectorAll('.ball')[i];
+      const n = out[gi][i];
+      slot.outerHTML = ballHTML(n, `pop${state.fix.has(n) ? ' fixed' : ''}`);
+    });
+    if (!reduce) await new Promise(r => setTimeout(r, 170));
+  }
+  lis.forEach((li, gi) => {
+    const nums = out[gi];
+    const pastNo = PAST.get(keyOf(nums));
+    const ov = bestOverlap(nums);
+    const pills = [];
+    if (pastNo) pills.push(`<span class="pill warn">${pastNo}회(${dateOf(pastNo)}) 1등 번호와 똑같아요</span>`);
+    else pills.push(`<span class="pill ok">역대 1등 조합 아님</span>`);
+    if (!pastNo) {
+      const ex = ov.at.slice(-1)[0];
+      pills.push(`<span class="pill">가장 비슷한 회차: ${ex}회 · ${ov.best}개 일치${ov.at.length > 1 ? ` 외 ${ov.at.length - 1}회` : ''}</span>`);
+    }
+    li.querySelector('.meta').innerHTML = pills.join('');
+    const btn = li.querySelector('.copy'); btn.disabled = false;
+    btn.onclick = () => copyText(nums.join(', '));
+  });
+  state.last = out;
+  $('footNote').textContent = exclude
+    ? (rejected ? `역대 1등 조합과 겹친 ${rejected}개는 버리고 다시 뽑았어요.` : `이번엔 역대 1등 조합과 겹친 번호가 없어서 버린 조합이 없어요.`)
+    : '필터가 꺼져 있어서 역대 1등 조합도 그대로 나올 수 있어요.';
+  // 기록
+  if (save) {
+  const his = store('lucky645.history') || [];
+  const t = new Date(); const stamp = `${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+  out.forEach(nums => his.unshift({ n: nums, t: stamp }));
+  store('lucky645.history', his.slice(0, 30));
+  renderHistory();
+  }
+  drawing = false; $('draw').disabled = false;
+}
+$('draw').addEventListener('click', () => draw(true));
+
+/* ---------- 복사 ---------- */
+function copyText(text) {
+  const done = () => toast('복사했어요');
+  try {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } catch (e) { fallbackCopy(text, done); }
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+  ta.remove(); ok ? done() : toast('복사하지 못했어요. 번호를 길게 눌러 직접 복사해 주세요.');
+}
+$('copyAll').addEventListener('click', () => {
+  if (!state.last.length) return toast('먼저 번호를 뽑아 주세요.');
+  copyText(state.last.map((n, i) => `${'ABCDE'[i]}  ${n.join(', ')}`).join('\n'));
+});
+
+/* ---------- 기록 ---------- */
+function renderHistory() {
+  const his = store('lucky645.history') || [];
+  $('history').innerHTML = his.map(h => `<li><span>${h.n.map(x => String(x).padStart(2, '0')).join('  ')}</span><span>${h.t}</span></li>`).join('');
+  $('hisEmpty').hidden = his.length > 0;
+}
+$('clearHis').addEventListener('click', () => { store('lucky645.history', []); renderHistory(); });
+
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800); }
+
+/* ---------- 초기 상태 ---------- */
+const savedEx = store('lucky645.exclude'); if (savedEx === false) $('excludePast').checked = false;
+const savedG = store('lucky645.games'); if (savedG >= 1 && savedG <= 5) state.games = savedG;
+const savedP = store('lucky645.pick'); if (savedP) { (savedP.fix || []).slice(0, 5).forEach(n => state.fix.add(n)); (savedP.ban || []).forEach(n => { if (!state.fix.has(n)) state.ban.add(n); }); }
+renderSwitch(); renderSeg(); renderOmr(); renderHistory();
+draw(false); // 첫 화면에서 바로 한 장 뽑아 보여줌
+
+/* ---------- 최신 회차 자동 반영 ---------- */
+const SRC = 'https://raw.githubusercontent.com/smok95/lotto/main/results/';
+async function getJSON(url) { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+function valid(x, no) { return x && x.draw_no === no && Array.isArray(x.numbers) && new Set(x.numbers).size === 6 && x.numbers.every(n => n >= 1 && n <= 45); }
+async function syncLatest() {
+  try {
+    const latest = await getJSON(SRC + 'latest.json');
+    if (!latest || latest.draw_no <= N || latest.draw_no - N > 60) return;
+    const added = [];
+    for (let no = N + 1; no <= latest.draw_no; no++) {
+      const x = no === latest.draw_no ? latest : await getJSON(`${SRC}${no}.json`);
+      if (!valid(x, no)) return;
+      added.push(x);
+    }
+    for (const x of added) {
+      const nums = x.numbers.slice().sort((a, b) => a - b);
+      DRAWS.push(nums); PAST.set(keyOf(nums), x.draw_no);
+    }
+    N = DRAWS.length; LATEST_BONUS = added[added.length - 1].bonus_no;
+    renderLatest(); renderSwitch();
+  } catch (e) { /* 네트워크가 안 되면 내장 데이터로 그대로 동작 */ }
+}
+syncLatest();
+</script>
+
+</body>
+</html>

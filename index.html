@@ -160,9 +160,6 @@ h1 em{font-style:normal;color:var(--slip)}
 .chk-body{padding:14px 20px 20px;display:flex;flex-direction:column;gap:12px}
 .chk-actions{display:flex;flex-wrap:wrap;gap:8px}
 .chk-actions .btn{font-size:17px;padding:11px 18px}
-.file-btn{position:relative;overflow:hidden}
-.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
-.file-btn:focus-within{outline:3px solid var(--slip);outline-offset:2px}
 .paste-row{display:flex;gap:6px}
 .paste-row input{flex:1;min-width:0;font:inherit;font-size:13px;padding:9px 11px;border-radius:9px;border:1.5px solid var(--line);background:var(--ground);color:var(--ink)}
 .paste-row input:focus-visible{outline:2px solid var(--slip);outline-offset:1px}
@@ -171,6 +168,12 @@ h1 em{font-style:normal;color:var(--slip)}
 .scanner video{width:100%;height:100%;object-fit:cover;display:block}
 .scanner .frame{position:absolute;inset:16% 22%;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
 .scanner .close{position:absolute;top:10px;right:10px}
+.scan-result{position:absolute;inset:0;display:grid;place-items:center;padding:12px;pointer-events:none}
+.sr-box{text-align:center;padding:14px 22px;border-radius:16px;background:rgba(20,18,30,.82);color:#fff;max-width:100%}
+.scan-result strong{display:block;font-family:var(--f-display);font-weight:400;font-size:clamp(30px,9vw,44px);line-height:1.15}
+.scan-result span{font-size:13px;opacity:.9}
+.sr-box.win{background:color-mix(in srgb,var(--slip) 92%,transparent)}
+.sr-box.pop{animation:pop .42s cubic-bezier(.3,1.6,.5,1) both}
 .scanner .scan-msg{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .ticket{border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
 .ticket-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:12px 14px;background:var(--slip-tint)}
@@ -251,20 +254,20 @@ h1 em{font-style:normal;color:var(--slip)}
         </div>
         <div class="chk-body">
           <div class="chk-actions">
-            <button class="btn" id="camBtn">카메라로 QR 찍기</button>
-            <label class="btn ghost file-btn" for="qrFile">사진에서 찾기<input type="file" id="qrFile" accept="image/*"></label>
+            <button class="btn" id="camBtn">카메라 켜고 QR 비추기</button>
           </div>
           <div class="scanner" id="scanner" hidden>
             <video id="camVideo" playsinline muted></video>
             <div class="frame" aria-hidden="true"></div>
+            <div class="scan-result" id="scanResult" hidden></div>
             <button class="btn ghost close" id="camClose" style="background:var(--paper)">닫기</button>
-            <p class="scan-msg">용지 오른쪽 위 QR을 네모 안에 맞춰 주세요</p>
+            <p class="scan-msg" id="scanMsg">용지 오른쪽 위 QR을 네모 안에 맞춰 주세요</p>
           </div>
           <form class="paste-row" id="pasteForm">
             <input id="qrText" type="text" inputmode="url" autocomplete="off" placeholder="QR 주소 붙여넣기 (m.dhlottery.co.kr/?v=...)" aria-label="QR 주소">
             <button class="btn ghost" type="submit">확인</button>
           </form>
-          <p class="hint" id="chkHint">로또 용지의 QR을 찍으면 회차와 게임별 번호를 읽어 몇 등인지 바로 알려 드려요. 사진과 번호는 이 기기 밖으로 보내지 않아요.</p>
+          <p class="hint" id="chkHint">카메라를 켜고 용지 QR을 비추기만 하면 그 자리에서 당첨·낙첨이 뜹니다. 카메라를 켠 채로 여러 장을 연달아 비춰도 돼요. 화면은 이 기기 밖으로 보내지 않아요.</p>
           <div id="chkResult" aria-live="polite"></div>
         </div>
       </section>
@@ -556,13 +559,13 @@ function rankOf(nums, win, bonus) {
 const won = n => n >= 1e8 ? `${(n / 1e8).toFixed(n >= 1e10 ? 0 : 1)}억 원` : `${fmt(n)}원`;
 async function showTicket(t, sample) {
   const out = $('chkResult');
-  if (!t) { out.innerHTML = '<div class="notice" style="margin:0">로또 QR이 아니거나 읽지 못했어요. 용지를 평평하게 펴고 QR이 크게 나오도록 다시 찍어 주세요.</div>'; return; }
+  if (!t) { out.innerHTML = '<div class="notice" style="margin:0">로또 QR이 아니거나 읽지 못했어요. 용지를 평평하게 펴고 QR이 크게 나오도록 다시 비춰 주세요.</div>'; return { state: 'bad' }; }
   if (t.round > N) { out.innerHTML = '<p class="hint">최신 당첨번호를 확인하는 중…</p>'; try { await syncDone; } catch (e) {} }
   if (t.round > N) {
     out.innerHTML = `<div class="ticket"><div class="ticket-head"><strong>${t.round}회 · ${dateOf(t.round)} 추첨</strong></div>
       <div class="ticket-sum" style="padding-top:12px"><span>아직 추첨 전이거나 결과가 반영되기 전이에요. 추첨은 토요일 저녁 8시 35분쯤 진행돼요.</span></div>
       <ol class="games">${t.games.map((g, i) => `<li class="game"><span class="game-id">${'ABCDE'[i]}</span><div class="balls">${g.nums.map(n => ballHTML(n)).join('')}</div><span class="pill">${g.type}</span></li>`).join('')}</ol></div>`;
-    return;
+    return { state: 'wait', round: t.round };
   }
   const win = DRAWS[t.round - 1], bonus = BONUS[t.round - 1], ws = new Set(win);
   const ranks = t.games.map(g => rankOf(g.nums, win, bonus));
@@ -580,13 +583,16 @@ async function showTicket(t, sample) {
     }).join('')}</ol>
     <div class="ticket-sum"><span>${t.games.length}게임 중 <b>${hits ? hits + '게임 당첨' : '당첨 없음'}</b></span>${official ? `<a href="${official.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">공식 사이트에서 다시 확인</a>` : ''}</div>
   </div>`;
+  const best = Math.min(...ranks.map(r => r || 9));
+  const summary = { state: hits ? 'win' : 'lose', best, hits, round: t.round, games: t.games.length };
+  if (!scanning) out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
   if (ranks.some(r => r && r <= 3)) {
     try {
       const x = await getJSON(`${SRC}${t.round}.json`);
       out.querySelectorAll('[data-prize]').forEach(el => { const r = +el.dataset.prize; const p = x.divisions && x.divisions[r - 1] && x.divisions[r - 1].prize; if (p && r <= 3) el.textContent = `1게임당 ${won(p)} (세전)`; });
     } catch (e) { out.querySelectorAll('[data-prize]').forEach(el => { if (+el.dataset.prize <= 3) el.textContent = '당첨금은 공식 사이트에서 확인'; }); }
   }
-  out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+  return summary;
 }
 
 /* QR 읽기: 브라우저 내장 BarcodeDetector가 있으면 쓰고, 없으면 jsQR */
@@ -612,41 +618,50 @@ function drawTo(src, sw, sh, max) {
 
 let stream = null, scanning = false;
 async function startCam() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('이 브라우저는 카메라를 쓸 수 없어요. 사진에서 찾기를 이용해 주세요.');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('이 브라우저는 카메라를 쓸 수 없어요. 크롬이나 사파리로 열어 주세요.');
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
   } catch (e) { return toast('카메라 권한이 필요해요. 주소창의 카메라 권한을 허용해 주세요.'); }
   const v = $('camVideo'); v.srcObject = stream; await v.play().catch(() => {});
-  $('scanner').hidden = false; scanning = true; tick();
+  $('scanner').hidden = false; $('scanResult').hidden = true; scanning = true; lastText = ''; $('camBtn').textContent = '카메라 끄기'; $('scanner').scrollIntoView({ block: 'center' }); tick();
 }
-function stopCam() { scanning = false; $('scanner').hidden = true; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+function stopCam() { scanning = false; $('scanner').hidden = true; $('camBtn').textContent = '카메라 켜고 QR 비추기'; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+let lastText = '', resultTimer;
+function flash(sum) {
+  const el = $('scanResult');
+  const map = {
+    win: () => [`${sum.best}등 당첨!`, `${sum.round}회 · ${sum.games}게임 중 ${sum.hits}게임 당첨`],
+    lose: () => ['낙첨', `${sum.round}회 · ${sum.games > 1 ? sum.games + '게임 모두 ' : ''}꽝이에요`],
+    wait: () => ['추첨 전', `${sum.round}회는 아직 결과가 없어요`],
+    bad: () => ['로또 QR이 아니에요', '용지의 QR을 비춰 주세요'],
+  };
+  const [big, small] = map[sum.state]();
+  el.innerHTML = `<div class="sr-box pop${sum.state === 'win' ? ' win' : ''}"><strong>${big}</strong><span>${small}</span></div>`;
+  el.hidden = false;
+  $('scanMsg').textContent = '다음 용지를 비추면 이어서 확인해요';
+  clearTimeout(resultTimer); resultTimer = setTimeout(() => { el.hidden = true; }, 4000);
+}
 async function tick() {
   if (!scanning) return;
   const v = $('camVideo');
   if (v.readyState >= 2 && v.videoWidth) {
     const [w, h] = drawTo(v, v.videoWidth, v.videoHeight, 800);
     const text = await decode(detector ? v : work, w, h, work);
-    if (text) { stopCam(); if (navigator.vibrate) navigator.vibrate(60); $('qrText').value = text; return showTicket(parseTicket(text)); }
+    if (text && text !== lastText) {
+      lastText = text;
+      const t = parseTicket(text);
+      const sum = await showTicket(t);
+      if (!scanning) return;
+      if (t) $('qrText').value = text;
+      if (navigator.vibrate) navigator.vibrate(sum.state === 'win' ? [80, 60, 80] : 60);
+      flash(sum);
+    }
   }
   setTimeout(() => requestAnimationFrame(tick), 120);
 }
-$('camBtn').addEventListener('click', startCam);
+$('camBtn').addEventListener('click', () => scanning ? stopCam() : startCam());
+document.addEventListener('visibilitychange', () => { if (document.hidden && scanning) stopCam(); });
 $('camClose').addEventListener('click', stopCam);
-$('qrFile').addEventListener('change', async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  $('chkResult').innerHTML = '<p class="hint">사진에서 QR을 찾는 중…</p>';
-  try {
-    const bmp = await createImageBitmap(f);
-    let text = null;
-    for (const max of [1600, 1000, 2400]) {
-      const [w, h] = drawTo(bmp, bmp.width, bmp.height, max);
-      text = await decode(detector ? work : null, w, h, work);
-      if (text) break;
-    }
-    if (text) $('qrText').value = text;
-    showTicket(text ? parseTicket(text) : null);
-  } catch (err) { showTicket(null); }
-});
 $('pasteForm').addEventListener('submit', e => { e.preventDefault(); showTicket(parseTicket($('qrText').value)); });
 $('chkSample').addEventListener('click', () => {
   const r = N, w = DRAWS[r - 1], p = n => String(n).padStart(2, '0');
